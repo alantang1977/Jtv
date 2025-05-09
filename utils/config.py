@@ -1,11 +1,57 @@
 import configparser
 import os
+import sys
 
 class Config:
     def __init__(self):
         self.config = configparser.ConfigParser()
         self.config.read('config/config.ini')
-
+        
+        # 创建默认配置（如果不存在）
+        self._create_default_config()
+    
+    def _create_default_config(self):
+        """创建默认配置项（如果不存在）"""
+        if not self.config.has_section("Settings"):
+            self.config.add_section("Settings")
+        
+        # 添加或更新必要的配置项
+        settings = {
+            "source_file": "config/demo.txt",
+            "final_file": "output/result.m3u",
+            "open_update": "True",
+            "open_speed_test": "True",
+            "open_history": "True",
+            "open_service": "False",
+            "open_hotel": "False",
+            "open_m3u_result": "True",
+            "ipv6_support": "False",
+            "speed_test_filter_host": "False",
+            "cdn_url": "",
+            "location": "",
+            "isp": "",
+            "app_port": "8080",
+            "time_zone": "Asia/Shanghai"
+        }
+        
+        for key, value in settings.items():
+            if not self.config.has_option("Settings", key):
+                self.config.set("Settings", key, value)
+        
+        self.save()
+    
+    def save(self):
+        """保存配置到文件"""
+        with open('config/config.ini', 'w', encoding='utf-8') as f:
+            self.config.write(f)
+    
+    def set(self, section, option, value):
+        """设置配置值"""
+        if not self.config.has_section(section):
+            self.config.add_section(section)
+        self.config.set(section, option, value)
+        self.save()
+    
     @property
     def source_file(self):
         return self.config.get("Settings", "source_file", fallback="config/demo.txt")
