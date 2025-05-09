@@ -6,9 +6,6 @@ from xml.dom import minidom
 
 
 def write_to_xml(programmes, path):
-    """
-    将节目信息写入XML文件
-    """
     root = ET.Element('tv', attrib={'date': datetime.now().strftime("%Y%m%d%H%M%S +0800")})
     for channel_id, data in programmes.items():
         channel_elem = ET.SubElement(root, 'channel', attrib={"id": channel_id})
@@ -23,9 +20,6 @@ def write_to_xml(programmes, path):
 
 
 def compress_to_gz(input_path, output_path):
-    """
-    将文件压缩为GZ格式
-    """
     with open(input_path, 'rb') as f_in:
         with gzip.open(output_path, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
