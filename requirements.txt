@@ -4,5 +4,4 @@ opencc-python-reimplemented>=0.1.6
 pytz>=2023.3
 requests>=2.28.1
 tqdm>=4.64.1
-tkinter>=8.6  # 如果需要GUI界面
-python-dotenv>=1.0.0  # 如果需要环境变量支持
+# tkinter>=8.6  # 注释或删除此行
