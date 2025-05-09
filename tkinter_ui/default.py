@@ -89,32 +89,77 @@ class DefaultUI:
         self.time_zone_combobox.pack(side=tk.LEFT, padx=4, pady=8)
         self.time_zone_combobox.bind("<<ComboboxSelected>>", self.update_time_zone)
         
-        # 其他设置...
-        # 可以继续添加更多设置项
-
+        # M3U特定设置
+        frame_m3u = tk.LabelFrame(frame_default, text="M3U设置")
+        frame_m3u.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 包含EPG信息
+        frame_m3u_epg = tk.Frame(frame_m3u)
+        frame_m3u_epg.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.m3u_epg_label = tk.Label(
+            frame_m3u_epg, text="包含EPG信息:", width=15
+        )
+        self.m3u_epg_label.pack(side=tk.LEFT, padx=4, pady=8)
+        
+        self.m3u_epg_var = tk.BooleanVar(value=config.open_method.get("epg", True))
+        self.m3u_epg_checkbutton = ttk.Checkbutton(
+            frame_m3u_epg,
+            variable=self.m3u_epg_var,
+            onvalue=True,
+            offvalue=False,
+            command=self.update_m3u_epg,
+        )
+        self.m3u_epg_checkbutton.pack(side=tk.LEFT, padx=4, pady=8)
+        
+        # 自动打开M3U结果
+        frame_open_m3u = tk.Frame(frame_m3u)
+        frame_open_m3u.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.open_m3u_label = tk.Label(
+            frame_open_m3u, text="生成后自动打开:", width=15
+        )
+        self.open_m3u_label.pack(side=tk.LEFT, padx=4, pady=8)
+        
+        self.open_m3u_var = tk.BooleanVar(value=config.open_m3u_result)
+        self.open_m3u_checkbutton = ttk.Checkbutton(
+            frame_open_m3u,
+            variable=self.open_m3u_var,
+            onvalue=True,
+            offvalue=False,
+            command=self.update_open_m3u,
+        )
+        self.open_m3u_checkbutton.pack(side=tk.LEFT, padx=4, pady=8)
+    
     def update_open_update(self):
         """更新开启自动更新设置"""
         config.set("Settings", "open_update", str(self.open_update_var.get()))
-        config.save()
-
+    
     def update_open_service(self):
         """更新开启服务设置"""
         config.set("Settings", "open_service", str(self.open_service_var.get()))
-        config.save()
-
+    
     def update_app_port(self, event):
         """更新服务端口设置"""
         try:
             port = int(self.app_port_var.get())
             if 1 <= port <= 65535:
                 config.set("Settings", "app_port", str(port))
-                config.save()
             else:
                 messagebox.showerror("错误", "端口号必须在1-65535之间")
                 self.app_port_var.set(str(config.app_port))
         except ValueError:
             messagebox.showerror("错误", "请输入有效的端口号")
             self.app_port_var.set(str(config.app_port))
-
-    # 其他更新方法...
-    # 可以继续添加更多更新方法
+    
+    def update_time_zone(self, event):
+        """更新时区设置"""
+        config.set("Settings", "time_zone", self.time_zone_var.get())
+    
+    def update_m3u_epg(self):
+        """更新M3U包含EPG信息设置"""
+        config.set("Methods", "open_epg", str(self.m3u_epg_var.get()))
+    
+    def update_open_m3u(self):
+        """更新生成后自动打开M3U设置"""
+        config.set("Settings", "open_m3u_result", str(self.open_m3u_var.get()))
