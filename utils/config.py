@@ -1,111 +1,82 @@
 import configparser
 import os
-import sys
 
 class Config:
+    """配置管理类，负责读取和管理应用配置"""
+    
     def __init__(self):
+        """初始化配置管理器"""
         self.config = configparser.ConfigParser()
         self.config.read('config/config.ini')
-        
-        # 创建默认配置（如果不存在）
-        self._create_default_config()
-    
-    def _create_default_config(self):
-        """创建默认配置项（如果不存在）"""
-        if not self.config.has_section("Settings"):
-            self.config.add_section("Settings")
-        
-        # 添加或更新必要的配置项
-        settings = {
-            "source_file": "config/demo.txt",
-            "final_file": "output/result.m3u",
-            "open_update": "True",
-            "open_speed_test": "True",
-            "open_history": "True",
-            "open_service": "False",
-            "open_hotel": "False",
-            "open_m3u_result": "True",
-            "ipv6_support": "False",
-            "speed_test_filter_host": "False",
-            "cdn_url": "",
-            "location": "",
-            "isp": "",
-            "app_port": "8080",
-            "time_zone": "Asia/Shanghai"
-        }
-        
-        for key, value in settings.items():
-            if not self.config.has_option("Settings", key):
-                self.config.set("Settings", key, value)
-        
-        self.save()
-    
-    def save(self):
-        """保存配置到文件"""
-        with open('config/config.ini', 'w', encoding='utf-8') as f:
-            self.config.write(f)
-    
-    def set(self, section, option, value):
-        """设置配置值"""
-        if not self.config.has_section(section):
-            self.config.add_section(section)
-        self.config.set(section, option, value)
-        self.save()
-    
+
     @property
     def source_file(self):
+        """获取源文件路径"""
         return self.config.get("Settings", "source_file", fallback="config/demo.txt")
 
     @property
     def final_file(self):
+        """获取最终输出文件路径"""
         return self.config.get("Settings", "final_file", fallback="output/result.m3u")
 
     @property
     def open_update(self):
+        """是否启用自动更新"""
         return self.config.getboolean("Settings", "open_update", fallback=True)
 
     @property
     def open_speed_test(self):
+        """是否启用测速功能"""
         return self.config.getboolean("Settings", "open_speed_test", fallback=True)
 
     @property
     def open_history(self):
+        """是否启用历史记录功能"""
         return self.config.getboolean("Settings", "open_history", fallback=True)
 
     @property
     def open_service(self):
+        """是否启用服务"""
         return self.config.getboolean("Settings", "open_service", fallback=False)
 
     @property
     def open_hotel(self):
+        """是否启用酒店相关数据源"""
         return self.config.getboolean("Settings", "open_hotel", fallback=False)
 
     @property
     def open_m3u_result(self):
+        """是否启用M3U结果格式"""
         return self.config.getboolean("Settings", "open_m3u_result", fallback=True)
 
     @property
     def ipv6_support(self):
+        """是否支持IPv6"""
         return self.config.getboolean("Settings", "ipv6_support", fallback=False)
 
     @property
     def speed_test_filter_host(self):
+        """是否在测速时过滤重复主机"""
         return self.config.getboolean("Settings", "speed_test_filter_host", fallback=False)
 
     @property
     def cdn_url(self):
+        """获取CDN URL配置"""
         return self.config.get("Settings", "cdn_url", fallback=None)
 
     @property
     def location(self):
+        """获取位置配置"""
         return self.config.get("Settings", "location", fallback="").split(',')
 
     @property
     def isp(self):
+        """获取ISP配置"""
         return self.config.get("Settings", "isp", fallback="").split(',')
 
     @property
     def open_method(self):
+        """获取各数据源的启用状态"""
         return {
             "hotel_fofa": self.config.getboolean("Methods", "open_hotel_fofa", fallback=False),
             "multicast": self.config.getboolean("Methods", "open_multicast", fallback=False),
@@ -116,6 +87,7 @@ class Config:
         }
 
     def resource_path(self, relative_path, persistent=False):
+        """获取资源路径，处理打包后的资源位置"""
         if getattr(sys, 'frozen', False):
             base_path = sys._MEIPASS
         else:
@@ -127,4 +99,5 @@ class Config:
             return os.path.join(data_dir, relative_path)
         return os.path.join(base_path, relative_path)
 
+# 创建全局配置实例
 config = Config()
