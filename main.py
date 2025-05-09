@@ -1,41 +1,26 @@
-import asyncio
-import copy
-import gzip
 import os
+import time
+import asyncio
 import pickle
-from time import time
-
+import gzip
+from collections import defaultdict
 from tqdm import tqdm
 
 import utils.constants as constants
-from updates.epg import get_epg
-from updates.fofa import get_channels_by_fofa
-from updates.hotel import get_channels_by_hotel
-from updates.multicast import get_channels_by_multicast
-from updates.online_search import get_channels_by_online_search
-from updates.subscribe import get_channels_by_subscribe_urls
-from utils.channel import (
-    get_channel_items,
-    append_total_data,
-    test_speed,
-    write_channel_to_file,
-    sort_channel_result,
-)
 from utils.config import config
 from utils.tools import (
-    get_pbar_remaining,
-    get_ip_address,
-    process_nested_dict,
+    convert_to_m3u,
     format_interval,
-    check_ipv6_support,
-    get_urls_from_file,
-    get_version_info,
-    join_url,
+    get_pbar_remaining,
     get_urls_len,
-    merge_objects
+    process_nested_dict,
+    merge_objects,
+    check_ipv6_support,
+    sort_channel_result,
+    write_channel_to_file,
+    get_ip_address
 )
-from utils.types import CategoryChannelData
-
+from utils.channel import append_data_to_info_data
 
 class UpdateSource:
 
@@ -43,14 +28,14 @@ class UpdateSource:
         self.update_progress = None
         self.run_ui = False
         self.tasks = []
-        self.channel_items: CategoryChannelData = {}
+        self.channel_items = defaultdict(dict)
         self.hotel_fofa_result = {}
         self.hotel_foodie_result = {}
         self.multicast_result = {}
         self.subscribe_result = {}
         self.online_search_result = {}
         self.epg_result = {}
-        self.channel_data: CategoryChannelData = {}
+        self.channel_data = defaultdict(dict)
         self.pbar = None
         self.total = 0
         self.start_time = None
@@ -109,6 +94,7 @@ class UpdateSource:
         try:
             user_final_file = config.final_file
             main_start_time = time()
+            
             if config.open_update:
                 self.channel_items = get_channel_items()
                 channel_names = [
@@ -119,8 +105,10 @@ class UpdateSource:
                 if not channel_names:
                     print(f"❌ No channel names found! Please check the {config.source_file}!")
                     return
+                
                 await self.visit_page(channel_names)
                 self.tasks = []
+                
                 append_total_data(
                     self.channel_items.items(),
                     self.channel_data,
@@ -130,9 +118,11 @@ class UpdateSource:
                     self.subscribe_result,
                     self.online_search_result,
                 )
+                
                 ipv6_support = config.ipv6_support or check_ipv6_support()
                 cache_result = self.channel_data
                 test_result = {}
+                
                 if config.open_speed_test:
                     urls_total = get_urls_len(self.channel_data)
                     test_data = copy.deepcopy(self.channel_data)
@@ -157,22 +147,30 @@ class UpdateSource:
                     )
                     cache_result = merge_objects(cache_result, test_result, match_key="url")
                     self.pbar.close()
+                
                 self.channel_data = sort_channel_result(
                     self.channel_data,
                     result=test_result,
                     filter_host=config.speed_test_filter_host,
                     ipv6_support=ipv6_support
                 )
+                
                 self.update_progress(
-                    f"正在生成结果文件",
+                    f"正在生成M3U播放列表",
                     0,
                 )
-                write_channel_to_file(
-                    self.channel_data,
-                    epg=self.epg_result,
-                    ipv6=ipv6_support,
-                    first_channel_name=channel_names[0],
+                
+                # 生成M3U文件
+                success = convert_to_m3u(
+                    path=user_final_file,
+                    first_channel_name=channel_names[0] if channel_names else None,
+                    data=self.channel_data,
+                    epg_data=self.epg_result if config.open_method.get("epg", True) else None
                 )
+                
+                if not success:
+                    print(f"❌ 生成M3U文件失败！")
+                
                 if config.open_history:
                     if os.path.exists(constants.cache_path):
                         with gzip.open(constants.cache_path, "rb") as file:
@@ -183,9 +181,15 @@ class UpdateSource:
                             cache_result = merge_objects(cache, cache_result, match_key="url")
                     with gzip.open(constants.cache_path, "wb") as file:
                         pickle.dump(cache_result, file)
+                
                 print(
                     f"🥳 Update completed! Total time spent: {format_interval(time() - main_start_time)}. Please check the {user_final_file} file!"
                 )
+                
+                # 自动打开M3U文件
+                if config.open_m3u_result and success:
+                    os.startfile(user_final_file)
+            
             if self.run_ui:
                 open_service = config.open_service
                 service_tip = ", 可使用以下地址进行观看:" if open_service else ""
@@ -217,12 +221,3 @@ class UpdateSource:
         self.tasks = []
         if self.pbar:
             self.pbar.close()
-
-
-if __name__ == "__main__":
-    info = get_version_info()
-    print(f"ℹ️ {info['name']} Version: {info['version']}")
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    update_source = UpdateSource()
-    loop.run_until_complete(update_source.start())
